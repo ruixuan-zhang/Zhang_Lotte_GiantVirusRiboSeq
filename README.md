@@ -18,7 +18,7 @@ Please organize folders like below
   - ...
 ```
 
-Instructions were written in the code for reproducing every figure. Current scripts can work with R 4.3.1.
+Instructions were written in the code for reproducing every figure. Current scripts can work with R 4.3.1. All needed R packages have been written at the top of each file. 
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
