@@ -1,0 +1,88 @@
+---
+title: "Figure4_share"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(ggsci)
+library(dplyr)
+library(tidyr)
+library(ggpubr)
+library(ggstatsplot)
+
+```
+
+## Figure 4A: Host
+
+```{r}
+reads_merge <- read.csv("../data_share/ratio_and_pause/codon_tAS_00.csv")
+```
+
+```{r}
+reads_merge %>% 
+  dplyr::filter(source == "Host")  %>% 
+  dplyr::filter(!Asite %in% c("TAA", "TGA", "TAG")) %>% 
+  dplyr::mutate(type = ifelse(grepl("[AT]$", Asite), "A/T", "G/C"))  %>% 
+  group_by(sample,type) %>% 
+  dplyr::summarise(n = n(), .groups = "drop")
+
+fig.4A_host_short_footprint <- reads_merge %>% 
+  dplyr::filter(!Asite %in% c("TAA", "TGA", "TAG")) %>% 
+  dplyr::mutate(pos3_type = ifelse(grepl("[AT]$", Asite), "A/T", "G/C"))  %>%
+  dplyr::mutate(x_axis = paste(source, pos3_type, sep = "_")) %>%
+  dplyr::filter(source == "Host") %>% 
+  ggplot(aes(x = pos3_type, y = tAS, color = pos3_type, fill = pos3_type)) + 
+  geom_boxplot(aes(color = pos3_type, fill = pos3_type), 
+               alpha = 0.5, linewidth = 0.2,
+               width = 0.6, notch = FALSE,  outlier.size=0.2)+
+  stat_compare_means(comparisons = list(c("G/C", "A/T")),
+                      method = "wilcox.test", 
+                      method.args = list(alternative = "less"),
+                      aes(label = "p.signif"), size = 2, hide.ns = FALSE) + # Add pairwise comparisons p-value
+  facet_grid(replicate~time, scales = "free") +  
+  scale_fill_jco() + scale_color_jco() + 
+  theme_bw() + 
+  xlab("") + ylab("Short footprint ratio for host") + 
+  theme(text = element_text(size = 8), 
+        legend.key.size = unit(2, "mm"),
+        strip.background = element_blank(),
+        legend.position = "none")
+
+fig.4A_host_short_footprint
+```
+
+## Figure 4B: Virus
+
+```{r}
+reads_merge %>% 
+  dplyr::filter(source == "Virus") %>% 
+  dplyr::filter(!Asite %in% c("TAA", "TGA", "TAG")) %>% 
+  dplyr::mutate(type = ifelse(grepl("[AT]$", Asite), "A/T", "G/C"))  %>% 
+  group_by(sample,type) %>% 
+  dplyr::summarise(n = n(), .groups = "drop")
+
+fig.4B_virus_short_footprint <- reads_merge %>% 
+  dplyr::filter(source == "Virus") %>% 
+  dplyr::filter(!Asite %in% c("TAA", "TGA", "TAG")) %>% 
+  dplyr::mutate(type = ifelse(grepl("[AT]$", Asite), "A/T", "G/C"))  %>%
+  dplyr::mutate(x_axis = paste(source, type, sep = "_")) %>%
+  ggplot(aes(x = type, y = tAS, color = type, fill = type)) + 
+  geom_boxplot(aes(color = type, fill = type), 
+               alpha = 0.5, linewidth = 0.2, 
+               width = 0.6, notch = FALSE,  outlier.size=0.2)+
+  stat_compare_means(comparisons = list(c("G/C", "A/T")),
+                     method = "wilcox.test", 
+                     method.args = list(alternative = "less"),
+                     aes(label = "p.signif"), size = 2, hide.ns = FALSE) + # Add pairwise comparisons p-value
+  facet_grid(replicate~time, scales = "free") + 
+  scale_fill_jco() + scale_color_jco() + 
+  theme_bw() +  
+  xlab("") + ylab("Short footprint ratio for virus") + 
+  theme(text = element_text(size = 8), 
+        legend.key.size = unit(2, "mm"),
+        strip.background = element_blank(),
+        legend.position = "none")
+
+fig.4B_virus_short_footprint
+```

@@ -1,0 +1,321 @@
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(ggplot2)
+library(ggsci)
+library(ggpubr)
+library(tidyr)
+```
+## Figure 1B
+
+```{r}
+sample_sum_ribo_merge <- read.csv("../data_share/meta/ribo_lib_merge.csv")
+sample_sum_rna_merge <- read.csv("../data_share/meta/rna_lib_merge.csv")
+head(sample_sum_ribo_merge)
+```
+
+```{r}
+sample_sum_coding_ribo_merge_longer <- sample_sum_ribo_merge %>% 
+  dplyr::mutate(sum_coding = RPF_amoeba + RPF_coding_virus + RPF_mito) %>%
+  dplyr::mutate(ratio_amoeba = RPF_amoeba / sum_coding, 
+                ratio_virus = RPF_coding_virus / sum_coding, 
+                ratio_mito = RPF_mito / sum_coding) %>%
+  dplyr::select(c("sample", "ratio_amoeba", "ratio_virus", "ratio_mito")) %>%
+  pivot_longer(cols = starts_with("r"), names_to = "source", values_to = "ratio") %>%
+  mutate(source = case_when(
+    source == "ratio_amoeba" ~ "Host", 
+    source == "ratio_virus" ~ "Virus", 
+    source == "ratio_mito" ~ "Mito",
+    TRUE ~ as.character(source)
+  )) %>% 
+  mutate(sample = gsub("_", " ", sample))
+
+sample_sum_coding_rna_merge_longer <- sample_sum_rna_merge %>% 
+  mutate(sum_coding = rna_amoeba + rna_coding_virus + rna_mito) %>%
+  mutate(ratio_amoeba = rna_amoeba / sum_coding, 
+         ratio_virus = rna_coding_virus / sum_coding, 
+         ratio_mito = rna_mito / sum_coding) %>%
+  dplyr::select(c("sample", "ratio_amoeba", "ratio_virus", "ratio_mito")) %>%
+  pivot_longer(cols = starts_with("r"), names_to = "source", values_to = "ratio") %>%
+  mutate(source = case_when(
+    source == "ratio_amoeba" ~ "Host", 
+    source == "ratio_virus" ~ "Virus", 
+    source == "ratio_mito" ~ "Mito",
+    TRUE ~ as.character(source)
+  )) %>% 
+  mutate(sample = gsub("_", " ", sample))
+```
+
+
+```{r}
+#################################
+# Bar plot without legend (RNA)
+#################################
+
+fig.bar_rna_w_caption <- sample_sum_coding_rna_merge_longer %>% 
+  dplyr::mutate(sample = factor(sample, levels = c("R1 0hpi", "R2 0hpi", "R1 2hpi", "R2 2hpi", "R1 4hpi", "R2 4hpi", "R1 8hpi", "R2 8hpi"))) %>% 
+  ggplot(aes(x = sample, y = ratio, fill = source)) + 
+  geom_bar(position = "stack", stat = "identity") + 
+  scale_fill_manual(values = c("#E64B35FF", "#3C5488FF", "#4DBBD5FF"),  # Updated colors to full opacity
+                    labels = c("Host", "Mito", "Virus")) +
+  theme_bw() + 
+  xlab(label = "") + ylab(label = "Fraction of mRNA") + 
+  theme(legend.title = element_blank(),
+        text = element_text(size = 8),
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),
+        legend.key.size = unit(2, "mm"))
+
+fig.bar_rna_w_caption
+```
+
+
+## Figure 1C
+
+```{r}
+fig.bar_ribo_w_caption <- sample_sum_coding_ribo_merge_longer %>% 
+  dplyr::mutate(sample = factor(sample, levels = c("R1 0hpi", "R2 0hpi", "R1 2hpi", "R2 2hpi", "R1 4hpi", "R2 4hpi", "R1 8hpi", "R2 8hpi"))) %>% 
+  ggplot(aes(x = sample, y = ratio, fill = source)) + 
+  geom_bar(position = "stack", stat = "identity") + 
+  scale_fill_manual(values = c("#E64B35FF", "#3C5488FF", "#4DBBD5FF"),  # Updated colors to full opacity
+                    labels = c("Host", "Mito", "Virus")) +
+  theme_bw() + 
+  xlab(label = "") + ylab(label = "Fraction of footprints") + 
+  theme(legend.title = element_blank(),
+        text = element_text(size = 8),
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),
+        legend.key.size = unit(2, "mm"))
+
+fig.bar_ribo_w_caption
+
+```
+
+## Figure 1D & 1E
+
+```{r}
+####################
+# Data
+####################
+
+TPM_rna_merge <- read.csv("../data_share/meta/TPM_rna_merge.csv", row.names = "X")
+TPM_ribo_merge <- read.csv("../data_share/meta/TPM_ribo_merge.csv", row.names = "X")
+
+####################
+# Figure
+####################
+fig.box_TPM_rna_merge <- TPM_rna_merge %>% 
+  tibble::rownames_to_column(var = "mrna") %>% 
+  dplyr::filter(!str_detect(mrna, "rna-Accao")) %>%
+  dplyr::mutate(source = if_else(str_detect(mrna, "^rna-MIMI"), "Virus", "Host")) %>% 
+  pivot_longer(cols = starts_with("R"), values_to = "TPM", names_to = "sample") %>% 
+  separate(col = "sample", into = c("replicate", "time"), sep = "_", remove = FALSE) %>%
+  mutate(sample = gsub("_", " ", sample)) %>% 
+  filter(!(source == "Virus" & time == "0hpi")) %>% 
+  dplyr::mutate(sample = factor(sample, levels = c("R1 0hpi", "R2 0hpi", "R1 2hpi", "R2 2hpi", "R1 4hpi", "R2 4hpi", "R1 8hpi", "R2 8hpi"))) %>% 
+  ggplot(aes(x = source, y = log10(TPM), color = source, fill = source)) + 
+  geom_boxplot(alpha = 0.5, linewidth = 0.2, size = 0.2, 
+                 width = 0.6, outlier.size=0.1) +
+  stat_compare_means(comparisons = list(c("Host", "Virus")), 
+                     method = "wilcox.test", 
+                     aes(label = "p.signif"), size = 2, hide.ns = FALSE) + 
+  scale_y_continuous(limits = c(0, 6.5)) + 
+  scale_color_npg() + scale_fill_npg() + 
+  theme_bw() + 
+  facet_grid(replicate~time, scales = "free", space = "free") + 
+  xlab("") + ylab("log10 RNA TPM") + 
+  theme(text = element_text(size = 8), 
+        legend.key.size = unit(2, "mm"),
+        strip.background = element_rect(fill = "white", colour = "white"),
+        legend.title = element_blank(),
+        legend.position = "none", axis.title.x = element_blank())  
+
+
+fig.box_TPM_ribo_merge <- TPM_ribo_merge %>% 
+  tibble::rownames_to_column(var = "mrna") %>% 
+    dplyr::filter(!str_detect(mrna, "rna-Accao")) %>%
+  dplyr::mutate(source = if_else(str_detect(mrna, "^rna-MIMI"), "Virus", "Host")) %>% 
+  pivot_longer(cols = starts_with("R"), values_to = "TPM", names_to = "sample") %>% 
+  separate(col = "sample", into = c("replicate", "time"), sep = "_", remove = FALSE) %>%
+  mutate(sample = gsub("_", " ", sample)) %>% 
+  filter(!(source == "Virus" & time == "0hpi")) %>% 
+  dplyr::mutate(sample = factor(sample, levels = c("R1 0hpi", "R2 0hpi", "R1 2hpi", "R2 2hpi", "R1 4hpi", "R2 4hpi", "R1 8hpi", "R2 8hpi"))) %>% 
+  ggplot(aes(x = source, y = log10(TPM+1), color = source, fill = source)) + 
+  geom_boxplot(alpha = 0.5, linewidth = 0.2, size = 0.2, 
+                 width = 0.6, outlier.size=0.1) +
+  stat_compare_means(comparisons = list(c("Host", "Virus")), 
+                     method = "wilcox.test", 
+                     aes(label = "p.signif"), size = 2, hide.ns = FALSE) + 
+  scale_y_continuous(limits = c(0, 6.5)) + 
+  scale_color_npg() + scale_fill_npg() + 
+  theme_bw() + 
+  facet_grid(replicate~time, scales = "free", space = "free") + 
+  xlab("") + ylab("log10 footprint TPM") + 
+  theme(text = element_text(size = 8), 
+        legend.key.size = unit(2, "mm"),
+        strip.background = element_rect(fill = "white", colour = "white"),
+        legend.title = element_blank(),
+        legend.position = "none", axis.title.x = element_blank()) 
+
+fig.box_TPM_rna_merge
+fig.box_TPM_ribo_merge
+```
+
+
+## Figure 1F
+
+```{r}
+long_data <- read.csv("../data_share/meta/TPM_amoeba_RNA_scaled_clustered.csv")
+long_data <- long_data %>% dplyr::mutate(sample = factor(sample, levels = c("R1 0hpi", "R2 0hpi", "R1 2hpi", "R2 2hpi", "R1 4hpi", "R2 4hpi", "R1 8hpi", "R2 8hpi"))) 
+
+long_data %>% 
+  dplyr::filter(sample == "R1 0hpi") %>% 
+  group_by(cluster) %>% 
+  dplyr::summarise(n = n())
+
+# Create the ggplot heatmap
+p.heat_host_RNA <- long_data %>%
+  ggplot(aes(x = sample, y = gene, fill = TPM)) +
+  geom_tile() +
+  scale_fill_gradientn(colors = c("#4575b4", "white", "#d73027")) +
+  labs(x = "", y = "", fill = "z-score") +
+  facet_grid(cluster~., space = "free", scale = "free") + 
+  theme_bw() +
+  theme(axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 1, size = 6),
+        axis.text.y = element_blank(),
+        axis.title = element_blank(),
+        text = element_text(size = 6),
+        strip.background = element_blank(),
+        legend.key.size = unit(3, "mm"))
+
+p.heat_host_RNA
+```
+
+```{r}
+long_data <- read.csv("../data/meta/TPM_amoeba_Ribo_scaled_clustered.csv")
+long_data <- long_data %>% dplyr::mutate(sample = factor(sample, levels = c("R1 0hpi", "R2 0hpi", "R1 2hpi", "R2 2hpi", "R1 4hpi", "R2 4hpi", "R1 8hpi", "R2 8hpi"))) 
+
+# Create the ggplot heatmap
+p.heat_host_RNA <- long_data %>%
+  ggplot(aes(x = sample, y = gene, fill = TPM)) +
+  geom_tile() +
+  scale_fill_gradientn(colors = c("#4575b4", "white", "#d73027")) +
+  labs(x = "", y = "", fill = "z-score") +
+  facet_grid(cluster~., space = "free", scale = "free") + 
+  theme_bw() +
+  theme(axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 1, size = 6),
+        axis.text.y = element_blank(),
+        axis.title = element_blank(),
+        text = element_text(size = 6),
+        strip.background = element_blank(),
+        legend.key.size = unit(3, "mm"))
+
+p.heat_host_RNA
+```
+
+
+## Figure 1G
+
+```{r}
+####################
+# Data
+####################
+long_data <- read.csv("../data_share/meta/TPM_virus_RNA_scaled_clustered.csv")
+long_data <- long_data %>% dplyr::mutate(sample = factor(sample, levels = c("R1 2hpi", "R2 2hpi", "R1 4hpi", "R2 4hpi", "R1 8hpi", "R2 8hpi"))) 
+
+long_data %>% 
+  dplyr::filter(sample == "R1 2hpi") %>% 
+  group_by(cluster) %>% 
+  dplyr::summarise(n = n())
+
+####################
+# Figure
+####################
+
+p.heat_virus_RNA <- 
+  ggplot(long_data, aes(x = sample, y = gene, fill = TPM)) +
+  geom_tile() +
+  scale_fill_gradientn(colors = c("#4575b4", "white", "#d73027")) +
+  labs(x = "", y = "", fill = "z-score") +
+  facet_grid(cluster~., space = "free", scale = "free") + 
+  theme_bw() +
+  theme(axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 1, size = 6),
+        axis.text.y = element_blank(),
+        axis.title = element_blank(),
+        text = element_text(size = 6),
+        strip.background = element_blank(),
+        legend.key.size = unit(3, "mm"))
+
+p.heat_virus_RNA
+```
+
+```{r}
+####################
+# Data
+####################
+long_data <- read.csv("../data_share/meta/TPM_virus_Ribo_scaled_clustered.csv")
+long_data <- long_data %>% dplyr::mutate(sample = factor(sample, levels = c("R1 2hpi", "R2 2hpi", "R1 4hpi", "R2 4hpi", "R1 8hpi", "R2 8hpi"))) 
+
+####################
+# Figure
+####################
+
+p.heat_virus_Ribo <- 
+  ggplot(long_data, aes(x = sample, y = gene, fill = TPM)) +
+  geom_tile() +
+  scale_fill_gradientn(colors = c("#4575b4", "white", "#d73027")) +
+  labs(x = "", y = "", fill = "z-score") +
+  facet_grid(cluster~., space = "free", scale = "free") + 
+  theme_bw() +
+  theme(axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 1, size = 6),
+        axis.text.y = element_blank(),
+        axis.title = element_blank(),
+        text = element_text(size = 6),
+        strip.background = element_blank(),
+        legend.key.size = unit(3, "mm"))
+
+p.heat_virus_Ribo
+```
+
+## Figure 1H
+
+```{r}
+####################
+# Data
+####################
+result_list_deseq <- read.csv("../data_share/meta/DESeq2.csv")
+
+####################
+# Figure
+####################
+fig.box_TE <- result_list_deseq %>% 
+  filter(time != "0hpi") %>% 
+  ggplot(aes(x = source, y = log2FoldChange, color = source, fill = source)) + 
+  geom_boxplot(alpha = 0.5, linewidth = 0.2, size = 0.2, 
+                 width = 0.6, outlier.size=0.1) +
+  stat_compare_means(comparisons = list(c("Host", "Virus")), 
+                     method = "wilcox.test", 
+                     method.args = list(alternative = "greater"),
+                     aes(label = "p.signif"), size = 2, hide.ns = FALSE) + 
+  scale_y_continuous(limits = c(-15,15)) + 
+  scale_color_npg() + scale_fill_npg() + 
+  theme_bw() + 
+  facet_wrap(~time, ncol = 3) + 
+  xlab("") + ylab("log2TE") + 
+  theme(text = element_text(size = 8), 
+        legend.key.size = unit(2, "mm"),
+        strip.background = element_rect(fill = "white", colour = "white"),
+        legend.title = element_blank(),
+        legend.position = "none") 
+
+fig.box_TE
+```
+
+

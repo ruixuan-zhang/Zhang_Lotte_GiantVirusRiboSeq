@@ -1,0 +1,61 @@
+---
+title: "FigureS5_share"
+output: html_document
+---
+
+## Figure S5
+
+```{r}
+library(ggplot2)
+library(ggsci)
+library(dplyr)
+library(tidyr)
+library(ggpubr)
+library(ggstatsplot)
+library(ggrepel)
+```
+
+```{r}
+codon_usage_df <- read.csv("../data_share/tRNA/codon_usage_table.csv")
+occhost_co_df <- read.csv("../data_share/occupancy/asite.host.NormAve.csv")
+virus_co_df <- read.csv("../data_share/occupancy/asite.virus.NormAve.csv", row.names = "X")
+host_co_df[, "source"] <- "Host"
+virus_co_df[, "source"] <-  "Virus"
+merged_co_df <- rbind(host_co_df, virus_co_df)
+head(merged_co_df)
+```
+
+
+```{r}
+codons_to_highlight <- c("TTA", "TGC", "CAC", "TGG", "TTG")
+
+fig.S5 <- merged_co_df %>% 
+  pivot_wider(names_from = "source", values_from = "Norm_by_averagereads", id_cols = c("Asite", "sample")) %>% 
+  dplyr::filter(!sample %in% c("R1_0hpi", "R2_0hpi")) %>%
+  dplyr::filter(!Asite %in% c("TAA", "TGA", "TAG")) %>% 
+  merge(., codon_usage_df, by.x = "Asite", by.y = "codon") %>%
+  mutate(color_group = ifelse(Asite %in% codons_to_highlight, "virus_tRNA", "other")) %>%
+  separate(col = 'sample' , into = c('replicate', 'time'), sep = '_', remove = FALSE) %>% 
+  ggplot(aes(x = Host, y = Virus, color = color_group)) +
+    geom_point(size = 0.8) +
+    geom_text_repel(data = . %>% filter(color_group != "other"), 
+                  aes(label = Asite), 
+                  size = 2, 
+                  box.padding = unit(0.35, "lines"),
+                  point.padding = unit(0.3, "lines"),
+                  max.overlaps = 15) + 
+    facet_grid(replicate~time) + 
+    xlim(0,1.6) + ylim(0,1.6) + 
+    scale_color_manual(values = c("virus_tRNA" = "red", "other" = "gray70")) +
+    xlab("Amoeba ribosome occupancy") + ylab("APMV ribosome occupancy") + 
+    theme_bw() + 
+    theme(text = element_text(size = 8), 
+              panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+              legend.key.size = unit(2, "mm"),
+              strip.background = element_rect(fill = "white", colour = "white"),
+              legend.title = element_blank(),  
+              axis.title.x = element_blank(),
+              legend.position  = "none")
+
+fig.S5
+```

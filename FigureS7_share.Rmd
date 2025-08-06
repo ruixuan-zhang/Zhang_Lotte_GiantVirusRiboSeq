@@ -1,0 +1,59 @@
+---
+title: "FigureS7_share"
+output: html_document
+---
+
+## Luciferase
+
+```{r}
+df <- read_csv("../data_share/luciferase/luciferase_ratio.csv") %>%
+  mutate(
+    axis = paste0(time, "-", plasmid),
+    axis = factor(axis, levels = c("M-AT", "8-AT", "M-GC", "8-GC")),
+    plasmid = factor(plasmid, levels = c("AT","GC"))
+  )
+
+mult_df <- df %>% 
+  dplyr::select(replicate, time, ratio, plasmid) %>% 
+  pivot_wider(names_from = plasmid, values_from = ratio) %>% 
+  dplyr::mutate(multiplier = GC / AT) %>% 
+  dplyr::mutate(time = recode(time, "M" = "M", "8" = "8"))  
+
+mult_df
+```
+
+```{r}
+mean_M_AT <- df %>%
+  filter(axis == "M-AT") %>%
+  summarise(m = mean(ratio, na.rm = TRUE)) %>%
+  pull(m)
+
+df <- df %>%
+  dplyr::mutate(
+    ratio_norm = ratio / mean_M_AT
+  )
+
+
+p_pubr <- ggplot(df, aes(x = axis, y = ratio_norm, color = plasmid)) +
+  # geom_boxplot(outlier.shape = NA, width = 0.4) +
+  geom_jitter(width = 0.1, size = 1.5) +
+  scale_color_manual(values = c(AT = "blue", GC = "red")) +
+  stat_compare_means(comparison = list(c("M-AT", "8-AT")), 
+                     method = "wilcox.test",
+                     method.args = list(alternative = "less"),
+                     aes(label = "p.signif"), size = 2, hide.ns = FALSE) + # Add pairwise comparisons p-value
+  stat_compare_means(comparison = list(c("M-GC", "8-GC")), 
+                     method = "wilcox.test",
+                     method.args = list(alternative = "less"),
+                     aes(label = "p.signif"), size = 2, hide.ns = FALSE) + # Add pairwise comparisons p-value
+  
+  labs(x = NULL, y = "Firefly/Renilla Ratio Relative to AT") +
+  theme_classic() +
+  theme(text = element_text(size = 10, family = "Arial"), 
+        legend.key.size = unit(2, "mm"),
+        strip.background = element_rect(fill = "white", colour = "white"),
+        legend.title = element_blank(),
+        legend.position = "none")
+
+p_pubr
+```

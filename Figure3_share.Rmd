@@ -1,0 +1,305 @@
+---
+title: "Figure3_share"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(ggsci)
+library(dplyr)
+library(tidyr)
+library(ggpubr)
+library(ggstatsplot)
+
+library(tidyverse)
+library(ggforce)       ## sina plots
+library(ggdist)        ## halfeye plots
+library(ggridges)      ## ridgeline plots
+library(ggbeeswarm)    ## beeswarm plots
+library(gghalves)      ## off-set jitter
+```
+
+## Figure 3A
+
+```{r}
+#############
+# Load data
+#############
+sample_source_df <- read.csv("../data_share/tRNA/tRNA_ratio_source.csv")
+
+#############
+# Figure
+#############
+p.bar_tRNA_w_caption <- sample_source_df %>% 
+  pivot_longer(cols = c("Virus", "Mito", "Host"), names_to = "source", values_to = "fraction") %>% 
+  mutate(sample = factor(sample, levels = c("R1 0hpi", "R2 0hpi", "R1 2hpi", "R2 2hpi", "R1 4hpi", "R2 4hpi", "R1 8hpi", "R2 8hpi"))) %>% 
+  ggplot(aes(x = sample, y = fraction, fill = source)) + 
+  geom_bar(position = "stack", stat = "identity") + 
+  scale_fill_manual(values = c("#E64B35FF", "#3C5488FF", "#4DBBD5FF"),  # Updated colors to full opacity
+                    labels = c("Host", "Mito", "Virus")) +
+  theme_bw() + 
+  xlab(label = "") + ylab(label = "Fraction of footprints") + 
+  theme(legend.title = element_blank(),
+        text = element_text(size = 8),
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),
+        legend.key.size = unit(2, "mm"))
+
+p.bar_tRNA_w_caption
+```
+
+
+## Figure 3B
+
+```{r}
+
+generate_tRNA_plot_pdf <- function(data, x_sample, y_sample, output_dir = "your_output_folder") {
+  # Ensure sample names are correctly formatted for your data structure
+  data <- data %>% mutate(sample = str_replace_all(sample, " ", "_"))
+  
+  # Filter data for the two samples of interest and calculate correlation
+  plot_data <- data %>% 
+    filter(sample %in% c(x_sample, y_sample)) %>%
+    dplyr::select(codon , ratio_total , sample) %>% 
+    pivot_wider(id_cols = "codon", names_from = "sample", values_from = "ratio_total")
+  
+  # Extract the columns as numeric vectors
+  x_values <- plot_data[[x_sample]]
+  y_values <- plot_data[[y_sample]]
+  
+  # Perform cor.test with these numeric vectors
+  test_result <- cor.test(x_values, y_values, method = "spearman")
+  
+  rho_res <- data.frame(
+    rho = test_result$estimate,
+    p = test_result$p.value
+  )
+
+  plot <- ggplot(plot_data, aes_string(x = x_sample, y = y_sample)) + 
+    geom_point(size = 0.3, color = "black") + 
+    # annotate("text", x = 3, y = 10, label = paste("rho =", sprintf("%.3f", rho)), size = 3) + 
+    geom_text(aes(label = paste("rho: ", round(rho_res$rho, 3)), x = 8, y = 9), 
+              hjust = 0.5, vjust = 0, size = 2,
+              position = position_stack(),
+              inherit.aes = TRUE) +
+    geom_text(aes(label = case_when(
+        rho_res$p < 0.05 & rho_res$p >= 0.01 ~ "*",
+        rho_res$p < 0.01 & rho_res$p >= 0.001 ~ "**",
+        rho_res$p < 0.001 & rho_res$p >= 0.0001 ~ "***",
+        rho_res$p < 0.00005 ~ "****",
+        TRUE ~ "ns"
+      ), x = 9, y = 8), 
+              hjust = 0.5, vjust = 0, size = 2, 
+              position = position_stack(),
+              inherit.aes = TRUE) +
+    xlab(gsub("_", " ", x_sample)) + ylab(gsub("_", " ", y_sample)) + 
+    theme_bw() + 
+    xlim(0, 10) + ylim(0, 10) + 
+    theme(text = element_text(size = 8),
+          strip.background = element_blank(),
+          strip.text.y = element_blank(),
+          legend.key.size = unit(2, "mm"))
+  
+  # Save the plot in different formats
+  file_names <- paste(output_dir, "tRNA_scatter_", x_sample, "_", y_sample, sep = "")
+  ggsave(paste(file_names, "pdf", sep = "."), plot = plot, dpi = 300, units = "mm", width = 40, height = 40)
+  ggsave(paste(file_names, "svg", sep = "."), plot = plot, dpi = 300, units = "mm", width = 40, height = 40)
+  return(plot)
+}
+
+generate_tRNA_plot_pdf_nocaption <- function(data, x_sample, y_sample, output_dir = "your_output_folder") {
+  # Ensure sample names are correctly formatted for your data structure
+  data <- data %>% mutate(sample = str_replace_all(sample, " ", "_"))
+  
+  # Filter data for the two samples of interest and calculate correlation
+  plot_data <- data %>% 
+    filter(sample %in% c(x_sample, y_sample)) %>%
+    dplyr::select(codon , ratio_total , sample) %>% 
+    pivot_wider(id_cols = "codon", names_from = "sample", values_from = "ratio_total")
+  
+  # Extract the columns as numeric vectors
+  x_values <- plot_data[[x_sample]]
+  y_values <- plot_data[[y_sample]]
+  
+  # Perform cor.test with these numeric vectors
+  test_result <- cor.test(x_values, y_values, method = "spearman")
+  
+  rho_res <- data.frame(
+    rho = test_result$estimate,
+    p = test_result$p.value
+  )
+
+  plot <- ggplot(plot_data, aes_string(x = x_sample, y = y_sample)) + 
+    geom_point(size = 0.3, color = "black") + 
+    # annotate("text", x = 3, y = 10, label = paste("rho =", sprintf("%.3f", rho)), size = 3) + 
+    geom_text(aes(label = paste("rho: ", round(rho_res$rho, 3)), x = 8, y = 9), 
+              hjust = 0.5, vjust = 0, size = 2,
+              position = position_stack(),
+              inherit.aes = TRUE) +
+    geom_text(aes(label = case_when(
+        rho_res$p < 0.05 & rho_res$p >= 0.01 ~ "*",
+        rho_res$p < 0.01 & rho_res$p >= 0.001 ~ "**",
+        rho_res$p < 0.001 & rho_res$p >= 0.0001 ~ "***",
+        rho_res$p < 0.00005 ~ "****",
+        TRUE ~ "ns"
+      ), x = 9, y = 8), 
+              hjust = 0.5, vjust = 0, size = 2, 
+              position = position_stack(),
+              inherit.aes = TRUE) +
+    xlab(gsub("_", " ", x_sample)) + ylab(gsub("_", " ", y_sample)) + 
+    theme_bw() + 
+    xlim(0, 10) + ylim(0, 10) + 
+    theme(text = element_text(size = 8),
+          strip.background = element_blank(),
+          strip.text.y = element_blank(),
+          legend.key.size = unit(2, "mm"),
+          axis.text.x = element_blank(),
+          axis.text.y = element_blank(),
+          axis.title.x = element_blank(),
+          axis.title.y = element_blank())
+  
+  # Save the plot in different formats
+  file_names <- paste(output_dir, "tRNA_scatter_", x_sample, "_", y_sample, "_wo_caption", sep = "")
+  ggsave(paste(file_names, "pdf", sep = "."), plot = plot, dpi = 300, units = "mm", width = 40, height = 40)
+  ggsave(paste(file_names, "svg", sep = "."), plot = plot, dpi = 300, units = "mm", width = 40, height = 40)
+
+  return(plot)
+}
+
+tRNA_ratio_tAI <- read.csv("../data_share/tRNA/tRNA_ratio_tAI.csv")
+
+tRNA_ratio_scaled_long <- tRNA_ratio_tAI %>% 
+  dplyr::filter(!codon %in% c("TAA", "TGA", "TAG")) %>% 
+  group_by(sample) %>%
+  dplyr::mutate(
+    sample_mean = mean(ratio_total),
+    sample_sd   = sd(ratio_total),
+    z = (ratio_total - sample_mean) / sample_sd
+  ) %>% 
+  ungroup() %>%
+  dplyr::mutate(AA_codon = paste0(AA, "_", codon))
+
+long_plot <- tRNA_ratio_scaled_long %>% 
+  mutate(sample = gsub("_", " ", sample)) %>% 
+  dplyr::mutate(sample = factor(sample, levels = c("R1 0hpi", "R2 0hpi", "R1 2hpi", "R2 2hpi", "R1 4hpi", "R2 4hpi", "R1 8hpi", "R2 8hpi"))) 
+
+generate_tRNA_plot_pdf(long_plot, "R2_0hpi", "R2_2hpi")
+generate_tRNA_plot_pdf(long_plot, "R2_0hpi", "R2_4hpi")
+generate_tRNA_plot_pdf(long_plot, "R2_0hpi", "R2_8hpi")
+generate_tRNA_plot_pdf(long_plot, "R1_0hpi", "R1_2hpi")
+generate_tRNA_plot_pdf(long_plot, "R1_0hpi", "R1_4hpi")
+generate_tRNA_plot_pdf(long_plot, "R1_0hpi", "R1_8hpi")
+
+
+generate_tRNA_plot_pdf_nocaption(long_plot, "R2_0hpi", "R2_2hpi")
+generate_tRNA_plot_pdf_nocaption(long_plot, "R2_0hpi", "R2_4hpi")
+generate_tRNA_plot_pdf_nocaption(long_plot, "R2_0hpi", "R2_8hpi")
+generate_tRNA_plot_pdf_nocaption(long_plot, "R1_0hpi", "R1_2hpi")
+generate_tRNA_plot_pdf_nocaption(long_plot, "R1_0hpi", "R1_4hpi")
+generate_tRNA_plot_pdf_nocaption(long_plot, "R1_0hpi", "R1_8hpi")
+
+```
+
+## Figure 3C
+
+```{r}
+#####################
+# Load and reshape data
+#####################
+
+tRNA_ratio_tAI <- read.csv("../data_share/tRNA/tRNA_ratio_tAI.csv")
+
+tRNA_ratio_scaled_long <- tRNA_ratio_tAI %>% 
+  dplyr::filter(!codon %in% c("TAA", "TGA", "TAG")) %>% 
+  group_by(sample) %>%
+  dplyr::mutate(
+    sample_mean = mean(ratio_total),
+    sample_sd   = sd(ratio_total),
+    z = (ratio_total - sample_mean) / sample_sd
+  ) %>% 
+  ungroup() %>%
+  dplyr::mutate(AA_codon = paste0(AA, "_", codon))
+
+long_plot <- tRNA_ratio_scaled_long %>% 
+  mutate(sample = gsub("_", " ", sample)) %>% 
+  dplyr::mutate(sample = factor(sample, levels = c("R1 0hpi", "R2 0hpi", "R1 2hpi", "R2 2hpi", "R1 4hpi", "R2 4hpi", "R1 8hpi", "R2 8hpi"))) 
+
+head(long_plot)
+```
+
+
+```{r}
+#####################
+# Plot
+#####################
+
+p.tRNA_box <- long_plot %>%
+  dplyr::filter(!codon %in% c("TAA", "TGA", "TAG")) %>%
+  dplyr::mutate(type = ifelse(grepl("[AT]$", codon), "A/T", "G/C"))  %>%
+  separate(col = "sample", into = c("replicate", "time"), remove = FALSE) %>%
+  ggplot(aes(x = type, y = ratio_total, color = type, fill = type)) + 
+  geom_boxplot(aes(color = type, fill = type), 
+               alpha = 0.5, linewidth = 0.2,
+                 width = 0.6, notch = FALSE,  outlier.size=0.2) +
+  stat_compare_means(comparison = list(c("G/C", "A/T")), 
+                    method = "wilcox.test", exact = FALSE,
+                    method.args = list(alternative = "greater"),
+                    aes(label = "p.signif"), size = 2, hide.ns = FALSE) + # Add pairwise comparisons p-value
+  facet_grid(replicate~time) + 
+  scale_fill_jco() + scale_color_jco() + 
+  theme_bw() + 
+  xlab("") + ylab("tRNA supply") + 
+  theme(text = element_text(size = 8), 
+        legend.key.size = unit(2, "mm"),
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        strip.text.y = element_blank(),
+        axis.text.x = element_blank(), 
+        legend.position = "none")
+  
+p.tRNA_box
+```
+
+## Figure 3D
+
+
+```{r}
+################
+# Load data
+################
+
+tRNA_ratio_tAI_nTE <- read.csv("../data_share/tRNA/syst_nTE.csv", row.names = "X")
+
+################
+# Figure
+################
+tRNA_ratio_tAI_nTE %>% 
+  separate(col = "sample", sep = "_", into = c("replicate", "time"), remove = FALSE) %>% 
+  # mutate(sample = gsub("_", " ", sample)) %>% 
+  # dplyr::mutate(sample = factor(sample, levels = c("R1 0hpi", "R2 0hpi"))) %>%
+  dplyr::mutate(type = ifelse(grepl("[AT]$", codon), "A/T", "G/C")) %>%
+  group_by(sample, type) %>% 
+  dplyr::summarise(n = n(), .groups = "drop")
+
+fig.3D_nTE <- tRNA_ratio_tAI_nTE %>% 
+  separate(col = "sample", sep = "_", into = c("replicate", "time"), remove = FALSE) %>% 
+  # mutate(sample = gsub("_", " ", sample)) %>% 
+  # dplyr::mutate(sample = factor(sample, levels = c("R1 0hpi", "R2 0hpi"))) %>%
+  dplyr::mutate(type = ifelse(grepl("[AT]$", codon), "A/T", "G/C"))  %>%
+  ggplot(aes(x = type, y = nTE)) + 
+  geom_boxplot(aes(color = pos3_type, fill = pos3_type), 
+               alpha = 0.5, linewidth = 0.3, outlier.size = 0.1) +
+  stat_compare_means(comparisons = list(c("A/T", "G/C")),
+                     method = "wilcox.test", 
+                     aes(label = "p.signif"), size = 2, hide.ns = FALSE) + # Add pairwise comparisons p-value
+  scale_y_continuous(limits = c(0, 1.2)) + 
+  scale_color_jco() + scale_fill_jco() + 
+  ylab("Balance Score") + xlab("") + 
+  theme_bw() + 
+  facet_grid(replicate~time, scales = "free") + 
+  theme(text = element_text(size = 8), 
+        legend.key.size = unit(2, "mm"),
+        strip.background = element_blank(),
+        legend.position = "none")
+
+fig.3D_nTE
+```

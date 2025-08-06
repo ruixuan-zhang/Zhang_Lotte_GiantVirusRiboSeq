@@ -1,0 +1,158 @@
+
+```{r}
+library(ggplot2)
+library(ggsci)
+library(dplyr)
+library(tidyr)
+library(ggpubr)
+library(ggstatsplot)
+library(ggrepel)
+
+```
+
+## Figure 2A & 2B
+
+```{r}
+### Codon occupancy
+asite_host <- read.csv("../data_share/occupancy/asite.host.NormAve.csv") %>% 
+  dplyr::select(Asite, Norm_by_averagereads, sample) %>% 
+  dplyr::rename(CO = Norm_by_averagereads) %>%
+  separate(col = sample, sep = "_", into = c("replicate", "time"), remove = FALSE) %>% 
+  dplyr::mutate(source = "Host")
+
+asite_virus <- read.csv("../data_share/occupancy/asite.virus.NormAve.csv") %>% 
+  dplyr::select(Asite, Norm_by_averagereads, sample) %>% 
+  dplyr::rename(CO = Norm_by_averagereads) %>%
+  separate(col = sample, sep = "_", into = c("replicate", "time"), remove = FALSE) %>% 
+  dplyr::mutate(source = "Virus")
+
+asite_merge <- rbind(asite_host, asite_virus)
+asite_merge <- asite_merge %>% 
+  dplyr::mutate(type = ifelse(grepl("[AT]$", Asite), "A/T", "G/C"))
+```
+
+
+```{r}
+fig.2A_occupancy_host <- asite_merge %>% 
+  dplyr::filter(source == "Host") %>% 
+  ggplot(aes(x = type, y = CO)) + 
+  geom_boxplot(aes(color = type, fill = type), 
+               alpha = 0.5, linewidth = 0.3, outlier.size = 0.1) +
+  stat_compare_means(comparisons = list(c("A/T", "G/C")),
+                     method = "wilcox.test", 
+                     aes(label = "p.signif"), 
+                     size = 2, hide.ns = FALSE) + # Add pairwise comparisons p-value
+  scale_color_jco() + scale_fill_jco() + 
+  ylab("Balance Score") + xlab("") + 
+  theme_bw() + 
+  facet_grid(replicate~time, scales = "free") + 
+  theme(text = element_text(size = 8), 
+        legend.key.size = unit(2, "mm"),
+        strip.background = element_blank(),
+        legend.position = "none")
+
+fig.2A_occupancy_host
+```
+
+```{r}
+fig.2B_occupancy_virus <- asite_merge %>% 
+  dplyr::filter(source == "Virus") %>% 
+  ggplot(aes(x = type, y = CO)) + 
+  geom_boxplot(aes(color = type, fill = type), 
+               alpha = 0.5, linewidth = 0.3, outlier.size = 0.1) +
+  stat_compare_means(comparisons = list(c("A/T", "G/C")),
+                     method = "wilcox.test", 
+                     aes(label = "p.signif"), 
+                     size = 2, hide.ns = FALSE) + # Add pairwise comparisons p-value
+  scale_color_jco() + scale_fill_jco() + 
+  ylab("Balance Score") + xlab("") + 
+  theme_bw() + 
+  facet_grid(replicate~time, scales = "free") + 
+  theme(text = element_text(size = 8), 
+        legend.key.size = unit(2, "mm"),
+        strip.background = element_blank(),
+        legend.position = "none")
+
+fig.2B_occupancy_virus
+```
+
+
+## Figure 2C
+
+```{r}
+MIMI_gp0741_example <- read.csv("../data_share/ratio_and_pause/pause_example.csv")
+
+fig.2C_pausing_example <- MIMI_gp0741_example %>% 
+  filter(mrna == "rna-MIMI_gp0741") %>% 
+  dplyr::mutate(type = ifelse(grepl("[AT]$", Asite), "A/T", "G/C")) %>%
+  dplyr::mutate(pause = ifelse(Value > up_bound, "pause", "normal")) %>%
+  ggplot(aes(x = codon, y = Value)) + 
+  geom_col(aes(color = pause, fill = pause), width = 0.2, alpha = 0.9, linewidth = 0.2) + 
+  xlab("") + ylab("Codon occupancy") + 
+  scale_color_manual(values = c("pause" = "red", "normal" = "grey")) +
+  scale_fill_manual(values = c("pause" = "red", "normal" = "grey")) + 
+  geom_hline(yintercept = 2.75326, linewidth = 0.3, color = "gray") + 
+  theme_classic() + 
+  theme(text = element_text(size = 8), 
+        legend.key.size = unit(2, "mm"),
+        strip.background = element_rect(fill = "white", colour = "white"),
+        legend.title = element_blank(),
+        legend.position = c(0.9, 0.8))
+
+fig.2C_pausing_example
+
+```
+
+
+## Figure 2D
+
+```{r}
+gene_pause_merge_all <- read.csv("../data_share/ratio_and_pause/gene_pause_all.csv")
+
+pseudo_gene_virus <- data.frame(
+  mrna = c("rna-MIMI_gp1000", "rna-MIMI_gp1000"),
+  n_pause = c(NA, NA),
+  n_all = c(NA, NA),
+  pausing_ratio = c(NA, NA),
+  sample = c("R1_0hpi", "R2_0hpi"),
+  source = c("Virus", "Virus")
+)
+
+gene_pause_merge_all_add <- rbind(gene_pause_merge_all, pseudo_gene_virus)
+
+fig.2D_pausing_frequency <- gene_pause_merge_all %>% 
+  filter(!sample %in% c("R1_0hpi", "R2_0hpi")) %>%
+  separate(col = "sample", into = c("replicate", "time"), sep = "_", remove = FALSE) %>% 
+  ggplot(aes(x = source, y = pausing_ratio)) + 
+  geom_boxplot(aes(color = source, fill = source), 
+               alpha = 0.5, linewidth = 0.3, 
+               width = 0.6, notch = FALSE,  outlier.size=0.2)+
+  stat_compare_means(comparisons = list(c("Host", "Virus")), 
+                     method = "wilcox.test", 
+                     method.args = list(alternative = "greater"),
+                     aes(label = "p.signif"), size = 2, hide.ns = FALSE) + # Add pairwise comparisons p-value
+  facet_grid(replicate~time, scales = "free") + 
+#  scale_y_continuous(limits = c(0, 0.13)) + 
+  scale_fill_npg() + scale_color_npg() + 
+  theme_classic() + 
+  xlab("") + ylab("Fraction of pausing site per gene") + 
+  theme(text = element_text(size = 8), 
+        legend.key.size = unit(2, "mm"),
+        strip.background = element_blank(),
+        strip.text.x = element_blank(),
+        strip.text.y = element_blank(),
+        axis.text.x = element_blank(),
+        legend.position = "none")
+
+fig.2D_pausing_frequency
+```
+
+
+
+
+
+
+
+
+
+

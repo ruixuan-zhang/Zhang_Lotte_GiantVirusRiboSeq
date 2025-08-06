@@ -1,0 +1,149 @@
+---
+title: "FigureS2R"
+output: html_document
+---
+
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(ggplot2)
+library(ggsci)
+library(ggpubr)
+library(tidyr)
+library(factoextra)
+```
+
+
+## 1) K-means clustering number determination
+
+```{r}
+#####################
+## Load data
+#####################
+
+TPM_rna_amoeba <- read.csv("../data_share/meta/TPM_rna_ameoba.csv", row.names = "X")
+
+#####################
+## Figure
+#####################
+TPM_z_rna_amobea <- TPM_rna_amoeba %>%
+  tibble::rownames_to_column(var = "mrna") %>%
+  pivot_longer(cols = starts_with("R"), names_to = "sample", values_to = "TPM") %>%
+  separate(col = "sample", sep = "_", into = c("replicate", "time"), remove = FALSE) %>% 
+  group_by(mrna, replicate) %>% 
+  dplyr::mutate(z = scale(TPM)) %>% 
+  ungroup()
+
+TPM_z_rna_amobea_wide <- TPM_z_rna_amobea %>% 
+  dplyr::select(mrna, sample, z) %>% 
+  pivot_wider(id_cols = "mrna", names_from = "sample", values_from = "z") %>%
+  tibble::column_to_rownames(var = "mrna")
+
+handle_matrix <- as.matrix(TPM_z_rna_amobea_wide) 
+
+set.seed(2023)
+
+fig.wss <- fviz_nbclust(handle_matrix, kmeans, method = "wss") +
+  labs(subtitle = "Elbow method") + 
+  theme(text = element_text(size = 6))
+# Silhouette method
+fig.sil <- fviz_nbclust(handle_matrix, kmeans, method = "silhouette")+
+  labs(subtitle = "Silhouette method") + 
+  theme(text = element_text(size = 6))
+
+fig.wss
+fig.sil
+```
+
+
+## 2) K-means number determination for virus
+
+```{r}
+#####################
+## Load data
+#####################
+TPM_rna_virus <- read.csv("../data_share/meta/TPM_rna_virus.csv", row.names = "X")
+TPM_ribo_virus <- read.csv("../data_share/meta/TPM_ribo_virus.csv", row.names = "X")
+
+#####################
+## Figure
+#####################
+
+TPM_z_rna_virus <- TPM_rna_virus %>%
+  tibble::rownames_to_column(var = "mrna") %>%
+  pivot_longer(cols = starts_with("R"), names_to = "sample", values_to = "TPM") %>%
+  separate(col = "sample", sep = "_", into = c("replicate", "time"), remove = FALSE) %>% 
+  group_by(mrna, replicate) %>% 
+  dplyr::mutate(z = scale(TPM)) %>% 
+  ungroup()
+
+TPM_z_rna_virus_wide <- TPM_z_rna_virus %>% 
+  dplyr::select(mrna, sample, z) %>% 
+  pivot_wider(id_cols = "mrna", names_from = "sample", values_from = "z") %>%
+  tibble::column_to_rownames(var = "mrna")
+
+handle_matrix <- as.matrix(TPM_z_rna_virus_wide) 
+
+set.seed(2023)
+# Wss method
+fig.wss <- fviz_nbclust(handle_matrix, kmeans, method = "wss") +
+  labs(subtitle = "Elbow method") + 
+  theme(text = element_text(size = 6))
+
+# Silhouette method
+fig.sil <- fviz_nbclust(handle_matrix, kmeans, method = "silhouette")+
+  labs(subtitle = "Silhouette method")+ 
+  theme(text = element_text(size = 6))
+
+fig.wss
+fig.sil
+
+```
+
+
+## 3) KEGG pathway enrichment
+
+```{r}
+library(clusterProfiler)
+library(org.Acastellanii.eg.db) # Load
+
+gene2pathway_amoeba <-  read_table("../data_share/GO/gene2pathway_name_amoeba.txt")
+gene2pathway_name_amoeba <- read_table("../data_share/GO/gene2pathway_name_amoeba.txt")
+```
+
+```{r}
+# write.csv(x = TPM_amoeba_cluster[top_vary_list, ], file = "../data/meta/TPM_rna_amoeba_topvary_clustered.csv")
+
+TPM_amoeba_topvary_cluster <- read.csv("../data_share/meta/TPM_rna_amoeba_topvary_clustered.csv")
+TPM_amoeba_topvary_cluster <- TPM_amoeba_topvary_cluster %>% filter(!is.na(X)) %>% tibble::column_to_rownames(var = "X")
+
+summary(as.factor(TPM_amoeba_topvary_cluster[, "cluster"]))
+clusters <- TPM_amoeba_topvary_cluster[, "cluster"]
+gcCluster <- split(rownames(TPM_amoeba_topvary_cluster), clusters)
+names(gcCluster) <- c("c1", "c2", "c3", "c4")
+str(gcCluster)
+```
+
+```{r}
+TERM2NAME_amoeba <- as.data.frame(unique(gene2pathway_name_amoeba[,c(2,3)]))
+ck <- compareCluster(geneClusters = gcCluster, 
+                     fun = "enricher", 
+                     TERM2GENE = gene2pathway_amoeba[, c(2,1)],
+                     TERM2NAME = TERM2NAME_amoeba,
+                     pvalueCutoff = 0.05,
+                     pAdjustMethod = "BH",
+                     qvalueCutoff = 0.05) 
+
+as.data.frame(ck)
+```
+
+```{r}
+fig.KEGG_enrich <- dotplot(ck, font.size = 6, includeAll = TRUE, showCategory = 29) +
+  theme(text = element_text(size = 6),
+        strip.background = element_blank(),
+        legend.key.size = unit(3, "mm"))
+
+fig.KEGG_enrich
+```
+

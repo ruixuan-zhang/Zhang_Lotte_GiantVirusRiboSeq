@@ -1,0 +1,102 @@
+---
+title: "FigureS6_share"
+output: html_document
+---
+```{r}
+library(ggplot2)
+library(ggsci)
+library(dplyr)
+library(tidyr)
+library(ggpubr)
+library(ggstatsplot)
+
+```
+
+
+## Data
+
+```{r}
+############################
+## Load host part
+############################
+asite_reads_long <- read.csv("../data_share/short_footprint_ratio/Host/long_asite_counts_2930.csv", row.names = "X")
+asite_reads_short <- read.csv("../data_share/short_footprint_ratio/Host/short_asite_counts_2122.csv", row.names = "X")
+host_reads_merge <- merge(asite_reads_long[,c("Asite", "total_reads", "mean_reads", "sample")], 
+                           asite_reads_short[,c("Asite", "total_reads", "mean_reads", "sample")], 
+                           by = c("Asite", "sample"),
+                           suffixes = c("_long", "_short"))
+
+host_reads_merge[, "source"] = "Host"
+head(host_reads_merge)
+
+############################
+## Load virus part
+############################
+asite_reads_long <- read.csv("../data_share/short_footprint_ratio/Virus/long_asite_counts_2930.csv", row.names = "X")
+asite_reads_long <- asite_reads_long %>% dplyr::filter(!sample %in% c("R1_0hpi", "R2_0hpi"))
+asite_reads_short <- read.csv("../data_share/short_footprint_ratio/Virus/short_asite_counts_2122.csv", row.names = "X")
+asite_reads_short <- asite_reads_short %>% dplyr::filter(!sample %in% c("R1_0hpi", "R2_0hpi"))
+
+virus_reads_merge <- merge(asite_reads_long[,c("Asite", "total_reads", "mean_reads", "sample")], 
+                           asite_reads_short[,c("Asite", "total_reads", "mean_reads", "sample")], 
+                           by = c("Asite", "sample"),
+                           suffixes = c("_long", "_short"))
+
+virus_reads_merge[, "source"] = "Virus"
+head(virus_reads_merge)
+
+############################
+## Merge all
+############################
+reads_merge <- rbind(host_reads_merge, virus_reads_merge)
+reads_merge <- reads_merge %>% 
+  dplyr::select(Asite, sample, total_reads_long, total_reads_short, source) %>% 
+  dplyr::mutate(total = total_reads_long + total_reads_short, 
+                tAS = total_reads_short / total)
+
+head(reads_merge)
+```
+## Figure S6A
+
+```{r}
+fig.S6A_boxplot <- reads_merge %>%
+  dplyr::filter(source == "Host") %>% 
+  separate(col = "sample", sep = "_", into = c("replicate", "time"), remove = FALSE) %>%
+  mutate(type = ifelse(grepl("[AT]$", Asite), "AU3", "GC3"))  %>%
+  ggplot(aes(x = type, y = tAS)) + 
+  geom_boxplot(aes(color = type, fill = type), alpha = 0.5) + 
+  stat_compare_means(comparisons = list(c("AU3", "GC3")), 
+                     method = "wilcox.test", 
+                     method.args = list(alternative = "greater"),
+                     aes(label = "p.signif"), size = 3, hide.ns = FALSE) + # Add pairwise comparisons p-value
+  scale_fill_jco() + scale_color_jco() + 
+  scale_y_continuous(limits = c(0, 1.5)) + 
+  facet_grid(replicate~time) + 
+  xlab("") + 
+  ylab("Short footprint ratio") + 
+  theme_bw()  
+
+fig.S6A_boxplot
+```
+## Figure S6B
+
+```{r}
+fig.S6B_boxplot <- reads_merge %>%
+  dplyr::filter(source == "Virus") %>% 
+  separate(col = "sample", sep = "_", into = c("replicate", "time"), remove = FALSE) %>%
+  mutate(type = ifelse(grepl("[AT]$", Asite), "AU3", "GC3"))  %>%
+  ggplot(aes(x = type, y = tAS)) + 
+  geom_boxplot(aes(color = type, fill = type), alpha = 0.5) + 
+  stat_compare_means(comparisons = list(c("AU3", "GC3")), 
+                     method = "wilcox.test", 
+                     method.args = list(alternative = "greater"),
+                     aes(label = "p.signif"), size = 3, hide.ns = FALSE) + # Add pairwise comparisons p-value
+  scale_fill_jco() + scale_color_jco() + 
+  scale_y_continuous(limits = c(0, 1.5)) + 
+  facet_grid(replicate~time) + 
+  xlab("") + 
+  ylab("Short footprint ratio") + 
+  theme_bw()  
+
+fig.S6B_boxplot
+```

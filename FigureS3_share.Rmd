@@ -1,0 +1,55 @@
+---
+title: "FigureS12"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(ggsci)
+library(dplyr)
+library(tidyr)
+library(ggpubr)
+library(ggstatsplot)
+library(dplyr)
+library(tibble)
+library(ggplot2)
+library(tidyverse)
+library(ggpubr)
+```
+
+```{r}
+gene_pause_host <- read.csv("../data_share/gene_pause_all/gene_pause_res_host.csv")
+gene_pause_virus <- read.csv("../data_share/gene_pause_all/gene_pause_res_virus.csv")
+gene_pause_merge <- rbind(gene_pause_host, gene_pause_virus)
+head(gene_pause_merge)
+```
+
+## Figure S3
+
+```{r}
+fig.s3 <- gene_pause_merge %>% 
+  filter(!sample %in% c("R1_0hpi", "R2_0hpi")) %>%
+  filter(multi_sd != 0.5) %>% 
+  filter(multi_sd != 5) %>% 
+  mutate(sample = str_replace_all(sample, "_", " ")) %>%
+  ggplot(aes(x = source, y = pausing_ratio)) + 
+  geom_boxplot(aes(color = source, fill = source), 
+               alpha = 0.5, linewidth = 0.3, 
+               width = 0.6, notch = FALSE,  outlier.size=0.2)+
+  stat_compare_means(comparisons = list(c("Host", "Virus")), 
+                    method = "wilcox.test", 
+                    method.args = list(alternative = "greater"),
+                    aes(label = "p.signif"), size = 2, hide.ns = FALSE) + # Add pairwise comparisons p-value
+  facet_grid(multi_sd~sample, scales = "free") + 
+  scale_fill_npg() + scale_color_npg() + 
+  theme_classic() + 
+  xlab("") + ylab("Fraction of pausing site per gene") + 
+  theme(text = element_text(size = 8), 
+        legend.key.size = unit(1, "mm"),
+        strip.background = element_blank(),
+        legend.position = "none")
+
+fig.s3
+
+```
+

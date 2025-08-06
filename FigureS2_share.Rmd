@@ -1,0 +1,487 @@
+---
+title: "FigureS2_share"
+output: html_document
+---
+
+```{r}
+library(stringr)
+library(ggplot2)
+library(ggsci)
+library(dplyr)
+library(tidyr)
+library(ggpubr)
+library(ggstatsplot)
+library(smplot2)
+library(purrr)
+
+```
+
+
+## Figure S2 A-B
+
+```{r}
+merge_RPF <- read.csv("../data_share/meta/merged_RPF.csv", sep = ",")
+
+##### Figure S2A
+fig.S2A_Host_fraction <- merge_RPF %>% 
+  dplyr::filter(!(source == "Virus" & sample %in% c("R1_0hpi", "R2_0hpi"))) %>% 
+  dplyr::filter(!source == "Mito") %>%
+  separate(sample, sep = "_", into = c("replicate", "time"), remove = FALSE) %>% 
+  dplyr::filter(source == "Host") %>% 
+  dplyr::mutate(sample = gsub("_", " ", sample)) %>% 
+  ggplot(aes(x = length, y = fract, color = source, alpha = replicate)) + 
+  geom_line(linewidth = 0.5) + 
+  facet_wrap(time~source, nrow = 1) + 
+  scale_color_manual(values = c("#E64B35B2", "#4DBBD5B2"),  # Use ggsci's palette
+                    labels = c("Host", "Virus")) +
+  scale_alpha_manual(
+    values = c(
+      "R1" = 0.8,
+      "R2" = 0.6
+    )
+  ) +
+  theme_bw() + 
+  labs(x="Length of RPFs", y="Fraction",size = 6) + 
+  theme(text = element_text(size = 8), 
+        legend.key.size = unit(2, "mm"),
+        strip.background = element_rect(fill = "white", colour = "white"),
+        legend.title = element_blank(),
+        legend.position = "right")
+
+fig.S2A_Host_fraction
+
+##### Figure S2B
+fig.S2B_Virus_fraction <- merge_RPF %>% 
+  dplyr::filter(!(source == "Virus" & sample %in% c("R1_0hpi", "R2_0hpi"))) %>% 
+  dplyr::filter(!source == "Mito") %>%
+  separate(sample, sep = "_", into = c("replicate", "time"), remove = FALSE) %>% 
+  dplyr::filter(source == "Virus") %>% 
+  dplyr::mutate(sample = gsub("_", " ", sample)) %>% 
+  ggplot(aes(x = length, y = fract, color = source, alpha = replicate)) + 
+  geom_line(linewidth = 0.5) + 
+  facet_wrap(time~source, nrow = 1) + 
+  scale_color_manual(values = c("#4DBBD5B2"),  # Use ggsci's palette
+                    labels = c("Virus")) +
+  scale_alpha_manual(
+    values = c(
+      "R1" = 0.8,
+      "R2" = 0.6
+    )
+  ) +
+  theme_bw() + 
+  labs(x="Length of RPFs", y="Fraction",size = 6) + 
+  theme(text = element_text(size = 8), 
+        legend.key.size = unit(2, "mm"),
+        strip.background = element_rect(fill = "white", colour = "white"),
+        legend.title = element_blank(),
+        legend.position = "right")
+
+fig.S2B_Virus_fraction
+```
+
+## Figure S2 C, E, G, I around start codon
+
+### Figure S2C
+
+```{r}
+df_nt_long_all <- read.csv( "../data_share/fptranscript/amoeba_fpt_start_long2930.csv")
+fig.reads_5end <- df_nt_long_all %>%
+  filter(pos <= 50 & pos >= -50) %>%
+  mutate(sample = gsub("_", " ", sample)) %>%
+  ggplot(aes(x = pos, y = sum)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
+  geom_line(aes(group = sample), alpha = 0.8, linewidth = 0.3)+
+  facet_wrap(~sample, ncol = 4, scales = "free") + 
+  xlab("Position (nt)") + ylab("Sum of reads") + 
+  theme_bw() + 
+  theme(text = element_text(size = 8, family = "Arial"), 
+        legend.key.size = unit(2, "mm"),
+        legend.title = element_blank(),
+        strip.background = element_rect(fill = "white", colour = "white"))
+
+fig.reads_5end
+```
+
+
+### Figure S2G
+
+```{r}
+df_nt_long_all <- read.csv( "../data_share/fptranscript/amoeba_fpt_start_short2122.csv")
+fig.reads_3end <- df_nt_long_all %>%
+  filter(pos <= 50 & pos >= -50) %>%
+  mutate(sample = gsub("_", " ", sample)) %>%
+  ggplot(aes(x = pos, y = sum)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
+  geom_line(aes(group = sample), alpha = 0.8, linewidth = 0.3)+
+  facet_wrap(~sample, ncol = 4, scales = "free") + 
+  xlab("Position (nt)") + ylab("Sum of reads") + 
+  theme_bw() + 
+  theme(text = element_text(size = 8, family = "Arial"), 
+        legend.key.size = unit(2, "mm"),
+        legend.title = element_blank(),
+        strip.background = element_rect(fill = "white", colour = "white"))
+
+fig.reads_3end
+```
+
+### Figure S2E
+
+```{r}
+df_nt_long_all <- read.csv( "../data_share/fptranscript/virus_fpt_start_long2930.csv")
+
+fig.reads_3end <- df_nt_long_all %>%
+  dplyr::filter(!sample %in% c("R1_0hpi", "R2_0hpi")) %>% 
+  filter(pos <= 50 & pos >= -50) %>%
+  mutate(sample = gsub("_", " ", sample)) %>%
+  ggplot(aes(x = pos, y = sum)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
+  geom_line(aes(group = sample), alpha = 0.8, linewidth = 0.3)+
+  facet_wrap(~sample, ncol = 3, scales = "free") + 
+  xlab("Position (nt)") + ylab("Sum of reads") + 
+  theme_bw() + 
+  theme(text = element_text(size = 8, family = "Arial"), 
+        legend.key.size = unit(2, "mm"),
+        legend.title = element_blank(),
+        strip.background = element_rect(fill = "white", colour = "white"))
+
+fig.reads_3end
+```
+
+
+### Figure S3I
+
+```{r}
+df_nt_long_all <- read.csv( "../data_share/fptranscript/virus_fpt_start_short2122.csv")
+
+fig.reads_3end <- df_nt_long_all %>%
+  dplyr::filter(!sample %in% c("R1_0hpi", "R2_0hpi")) %>% 
+  filter(pos <= 50 & pos >= -50) %>%
+  mutate(sample = gsub("_", " ", sample)) %>%
+  ggplot(aes(x = pos, y = sum)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
+  geom_line(aes(group = sample), alpha = 0.8, linewidth = 0.3)+
+  facet_wrap(~sample, ncol = 3, scales = "free") + 
+  xlab("Position (nt)") + ylab("Sum of reads") + 
+  theme_bw() + 
+  theme(text = element_text(size = 8, family = "Arial"), 
+        legend.key.size = unit(2, "mm"),
+        legend.title = element_blank(),
+        strip.background = element_rect(fill = "white", colour = "white"))
+
+fig.reads_3end
+```
+
+
+## Figure S2 D, F, H, J around stop codon
+
+### Figure S2D
+
+```{r}
+df_nt_long_all <- read.csv("../data_share/fptranscript/amoeba_fpt_stop_long_2930.csv")
+
+fig.reads_3end <- df_nt_long_all %>%
+  filter(pos <= 50 & pos >= -50) %>%
+  mutate(sample = gsub("_", " ", sample)) %>%
+  ggplot(aes(x = pos, y = sum)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
+  geom_line(aes(group = sample), alpha = 0.8, linewidth = 0.3)+
+  facet_wrap(~sample, ncol = 4, scales = "free") + 
+  xlab("Position (nt)") + ylab("Sum of reads") + 
+  theme_bw() + 
+  theme(text = element_text(size = 8, family = "Arial"), 
+        legend.key.size = unit(2, "mm"),
+        legend.title = element_blank(),
+        strip.background = element_rect(fill = "white", colour = "white"))
+
+fig.reads_3end
+```
+
+### Figure S2H
+
+```{r}
+df_nt_long_all <- read.csv("../data_share/fptranscript/amoeba_fpt_stop_short2122.csv")
+
+fig.reads_3end <- df_nt_long_all %>%
+  filter(pos <= 50 & pos >= -50) %>%
+  mutate(sample = gsub("_", " ", sample)) %>%
+  ggplot(aes(x = pos, y = sum)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
+  geom_line(aes(group = sample), alpha = 0.8, linewidth = 0.3)+
+  facet_wrap(~sample, ncol = 4, scales = "free") + 
+  xlab("Position (nt)") + ylab("Sum of reads") + 
+  theme_bw() + 
+  theme(text = element_text(size = 8, family = "Arial"), 
+        legend.key.size = unit(2, "mm"),
+        legend.title = element_blank(),
+        strip.background = element_rect(fill = "white", colour = "white"))
+
+fig.reads_3end
+```
+
+### Figure S2E
+
+
+```{R}
+df_nt_long_all <- read.csv("../data_share/fptranscript/virus_fpt_stop_long2930.csv")
+df_nt_long_all
+
+fig.reads_3end <- df_nt_long_all %>%
+  filter(pos <= 50 & pos >= -50) %>%
+  filter(!sample %in% c("R1_0hpi", "R2_0hpi")) %>%
+  mutate(sample = gsub("_", " ", sample)) %>%
+  ggplot(aes(x = pos, y = sum)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
+  geom_line(aes(group = sample), alpha = 0.8, linewidth = 0.3)+
+  facet_wrap(~sample, ncol = 3, scales = "free") + 
+  xlab("Position (nt)") + ylab("Sum of reads") + 
+  theme_bw() + 
+  theme(text = element_text(size = 8, family = "Arial"), 
+        legend.key.size = unit(2, "mm"),
+        legend.title = element_blank(),
+        strip.background = element_rect(fill = "white", colour = "white"))
+
+fig.reads_3end
+```
+
+### Figure S2J
+
+```{R}
+df_nt_long_all <- read.csv("../data_share/fptranscript/virus_fpt_stop_short2122.csv")
+df_nt_long_all
+
+fig.reads_3end <- df_nt_long_all %>%
+  filter(pos <= 50 & pos >= -50) %>%
+  filter(!sample %in% c("R1_0hpi", "R2_0hpi")) %>%
+  mutate(sample = gsub("_", " ", sample)) %>%
+  ggplot(aes(x = pos, y = sum)) + 
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
+  geom_line(aes(group = sample), alpha = 0.8, linewidth = 0.3)+
+  facet_wrap(~sample, ncol = 3, scales = "free") + 
+  xlab("Position (nt)") + ylab("Sum of reads") + 
+  theme_bw() + 
+  theme(text = element_text(size = 8, family = "Arial"), 
+        legend.key.size = unit(2, "mm"),
+        legend.title = element_blank(),
+        strip.background = element_rect(fill = "white", colour = "white"))
+
+fig.reads_3end
+```
+
+
+
+
+## Figure S2 K
+
+```{r}
+### Amoeba 
+z_t_final <- read.csv("../data_share/periodicity/amoeba_period_stop.csv")
+z_t_final 
+
+fig2R_host <- z_t_final %>% 
+  ggplot(aes(x=period, y=value...2, color = sample)) + 
+  geom_vline(xintercept = 3, color = "gray50", linetype = "dashed", linewidth = 0.3, alpha = 0.8) + 
+  geom_line(stat="identity", alpha = 0.8, linewidth = 0.3)+
+  coord_cartesian( xlim = c(2,10), expand = c(0)) +
+  scale_x_continuous(breaks = seq(2, 10, by = 1)) +
+  facet_grid(region~length, scale = "free") +
+  scale_color_brewer(palette="Reds") + 
+  theme_bw()+
+  theme(
+        axis.title.y = element_blank(),
+        axis.text = element_text(size = 6))
+
+fig2R_host
+
+### Virus 
+z_t_final <- read.csv("../data_share/periodicity/virus_period_stop.csv")
+z_t_final 
+
+fig2R_virus <- z_t_final %>% 
+  ggplot(aes(x=period, y=value...2, color = sample)) + 
+  geom_vline(xintercept = 3, color = "gray50", linetype = "dashed", linewidth = 0.3, alpha = 0.8) + 
+  geom_line(stat="identity", alpha = 0.8, linewidth = 0.3)+
+  coord_cartesian( xlim = c(2,10), expand = c(0)) +
+  scale_x_continuous(breaks = seq(2, 10, by = 1)) +
+  facet_grid(region~length, scale = "free") +
+  scale_color_brewer(palette="Blues") + 
+  theme_bw()+
+  theme(
+        axis.title.y = element_blank(),
+        axis.text = element_text(size = 6))
+
+fig2R_virus
+
+```
+
+## Figure S2 L-O
+
+```{r}
+####################
+# Data
+####################
+TPM_rna_merge <- read.csv("../data_share/meta/TPM_rna_merge.csv", row.names = "X")
+TPM_ribo_merge <- read.csv("../data_share/meta/TPM_ribo_merge.csv", row.names = "X")
+
+TPM_rna_merge_long <- TPM_rna_merge %>% 
+  tibble::rownames_to_column(var = "mrna") %>% 
+  dplyr::filter(!str_detect(mrna, "rna-Accao")) %>%
+  dplyr::mutate(source = if_else(str_detect(mrna, "^rna-MIMI"), "Virus", "Host")) %>% 
+  pivot_longer(cols = starts_with("R"), values_to = "TPM", names_to = "sample") %>% 
+  separate(col = "sample", into = c("replicate", "time"), sep = "_", remove = FALSE) %>%
+  dplyr::filter(!(source == "Virus" & time == "0hpi")) 
+
+pseudo_row_virus1 <- data.frame(mrna = "rna-MIMI_gp2000", source = "Virus", sample = "R1_0hpi", replicate = "R1", time = "0hpi", TPM = NA)
+pseudo_row_virus2 <- data.frame(mrna = "rna-MIMI_gp2000", source = "Virus", sample = "R2_0hpi", replicate = "R2", time = "0hpi", TPM = NA)
+
+TPM_rna_merge_long_add <- rbind(TPM_rna_merge_long, pseudo_row_virus1, pseudo_row_virus2)
+
+TPM_ribo_merge_long <- TPM_ribo_merge %>% 
+  tibble::rownames_to_column(var = "mrna") %>% 
+  dplyr::filter(!str_detect(mrna, "rna-Accao")) %>%
+  dplyr::mutate(source = if_else(str_detect(mrna, "^rna-MIMI"), "Virus", "Host")) %>% 
+  pivot_longer(cols = starts_with("R"), values_to = "TPM", names_to = "sample") %>% 
+  separate(col = "sample", into = c("replicate", "time"), sep = "_", remove = FALSE) %>%
+  dplyr::filter(!(source == "Virus" & time == "0hpi")) 
+
+pseudo_row_virus1 <- data.frame(mrna = "rna-MIMI_gp2000", source = "Virus", sample = "R1_0hpi", replicate = "R1", time = "0hpi", TPM = NA)
+pseudo_row_virus2 <- data.frame(mrna = "rna-MIMI_gp2000", source = "Virus", sample = "R2_0hpi", replicate = "R2", time = "0hpi", TPM = NA)
+
+TPM_ribo_merge_long_add <- rbind(TPM_ribo_merge_long, pseudo_row_virus1, pseudo_row_virus2)
+```
+
+
+
+```{r}
+TPM_rna_spearman <- TPM_rna_merge %>% 
+  tibble::rownames_to_column(var = "mrna") %>% 
+  dplyr::filter(!str_detect(mrna, "rna-Accao")) %>%
+  dplyr::mutate(source = if_else(str_detect(mrna, "^rna-MIMI"), "Virus", "Host")) %>% 
+  pivot_longer(cols = starts_with("R"), values_to = "TPM", names_to = "sample") %>% 
+  separate(col = "sample", into = c("replicate", "time"), sep = "_", remove = FALSE) %>%
+  pivot_wider(id_cols = c("mrna", "source", "time"), names_from = "replicate", values_from = "TPM") %>%
+  group_by(time, source) %>% 
+  dplyr::summarise(
+    rho = cor.test(R1, R2, method = "spearman", exact = TRUE)$estimate,
+    p_value = cor.test(R1, R2, method = "spearman", exact = TRUE)$p.value,
+    .groups = "drop"
+  ) 
+
+fig.S2_NO <- TPM_rna_merge %>% 
+  tibble::rownames_to_column(var = "mrna") %>% 
+  dplyr::filter(!str_detect(mrna, "rna-Accao")) %>%
+  dplyr::mutate(source = if_else(str_detect(mrna, "^rna-MIMI"), "Virus", "Host")) %>% 
+  pivot_longer(cols = starts_with("R"), values_to = "TPM", names_to = "sample") %>% 
+  separate(col = "sample", into = c("replicate", "time"), sep = "_", remove = FALSE) %>%
+  pivot_wider(id_cols = c("mrna", "source", "time"), names_from = "replicate", values_from = "TPM") %>% 
+  ggplot(aes(x = log2(R1), y = log2(R2), color = source)) + 
+  geom_point(size = 0.3) + 
+  geom_text(
+        data = TPM_rna_spearman,
+        aes(label = paste0("rho: ", round(rho, 3))),
+        x = Inf, y = Inf, # position the text in the top left corner
+        hjust = 1.1, vjust = 1.5,
+        size = 2, color = "black",
+        parse = FALSE
+      ) +
+    geom_text(
+        data = TPM_rna_spearman,
+        aes(label = case_when(
+          p_value < 0.05 & p_value >= 0.01 ~ "*",
+          p_value < 0.01 & p_value >= 0.001 ~ "**",
+          p_value < 0.001 & p_value >= 0.0001 ~ "***",
+          p_value < 0.00005 ~ "****",
+          TRUE ~ "ns"), 
+          x = Inf, y = Inf),
+        hjust = 2, vjust = 3.5, size = 2, color = "black",
+        position = position_stack(),
+        parse = FALSE
+      ) +
+  scale_color_npg() + 
+  theme_bw() + 
+  facet_grid(source ~ time) + 
+  xlab("Log2 RNA TPM Replicate 1") + ylab("Log2 RNA TPM Replicate 2") + 
+  theme(text = element_text(size = 8), 
+        legend.key.size = unit(2, "mm"),
+        strip.background = element_rect(fill = "white", colour = "white"),
+        legend.title = element_blank(),
+        legend.position = "none")
+
+fig.S2_NO
+```
+
+```{r}
+TPM_ribo_rep_df <- TPM_ribo_merge %>% 
+      tibble::rownames_to_column(var = "mrna") %>% 
+      dplyr::filter(!str_detect(mrna, "rna-Accao")) %>%
+      dplyr::mutate(source = if_else(str_detect(mrna, "^rna-MIMI"), "Virus", "Host")) %>% 
+      pivot_longer(cols = starts_with("R"), values_to = "TPM", names_to = "sample") %>% 
+      separate(col = "sample", into = c("replicate", "time"), sep = "_", remove = FALSE) %>%
+      pivot_wider(id_cols = c("mrna", "source", "time"), names_from = "replicate", values_from = "TPM")
+
+TPM_ribo_merge_spearman <- TPM_ribo_rep_df %>%
+  group_by(time, source) %>% 
+  dplyr::summarise(
+    rho = cor.test(R1, R2, method = "spearman", exact = TRUE)$estimate,
+    p_value = cor.test(R1, R2, method = "spearman", exact = TRUE)$p.value,
+    .groups = "drop"
+  ) 
+
+
+fig.S2_L_M  <- TPM_ribo_rep_df %>% 
+  ggplot(aes(x = log2(R1+1), y = log2(R2+1), color = source)) + 
+  geom_point(size = 0.3) + 
+  geom_text(
+        data = TPM_rna_spearman,
+        aes(label = paste0("rho: ", round(rho, 3))),
+        x = Inf, y = Inf, # position the text in the top left corner
+        hjust = 1.1, vjust = 1.5,
+        size = 2, color = "black",
+        parse = FALSE
+      ) +
+    geom_text(
+        data = TPM_rna_spearman,
+        aes(label = case_when(
+          p_value < 0.05 & p_value >= 0.01 ~ "*",
+          p_value < 0.01 & p_value >= 0.001 ~ "**",
+          p_value < 0.001 & p_value >= 0.0001 ~ "***",
+          p_value < 0.00005 ~ "****",
+          TRUE ~ "ns"), 
+          x = Inf, y = Inf),
+        hjust = 2, vjust = 3.5, size = 2, color = "black",
+        position = position_stack(),
+        parse = FALSE
+      ) +
+  theme_bw() + 
+  scale_color_npg() + 
+  facet_grid(source ~ time) + 
+  xlab("Log2 Ribo TPM Replicate 1") + ylab("Log2 Ribo TPM Replicate 2") + 
+  theme(text = element_text(size = 8), 
+        legend.key.size = unit(2, "mm"),
+        strip.background = element_rect(fill = "white", colour = "white"),
+        legend.title = element_blank(),
+        legend.position = "none")
+
+fig.S2_L_M
+```
+
+
+## Figure S2 P-Q
+
+```{r}
+reads_merge <- read.csv("../data_share/ratio_and_pause/codon_tAS_00.csv")
+head(reads_merge)
+
+fig.S2PQ <- reads_merge %>% 
+  ggplot(aes(x = time, y = tAS, group = Asite, color = source)) + 
+  geom_line(linewidth = 0.3, alpha = 0.5) + 
+  facet_grid(replicate~source) + 
+  scale_color_npg() + 
+  theme_bw() + 
+  xlab("") + ylab("Short footpritn ratio")
+
+fig.S2PQ 
+```
+
+
+
+

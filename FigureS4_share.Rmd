@@ -1,0 +1,85 @@
+---
+title: "FigureS4_share"
+output: html_document
+---
+
+```{r}
+library(ggplot2)
+library(ggsci)
+library(dplyr)
+library(tidyr)
+library(ggpubr)
+library(ggstatsplot)
+
+```
+
+
+## Figure S4
+
+```{r}
+##############
+# Load data 
+##############
+
+### Codon occupancy
+asite_host <- read.csv("../data_share/occupancy/asite.host.NormAve.csv") %>% 
+  dplyr::select(Asite, Norm_by_averagereads, sample) %>% 
+  dplyr::rename(CO_H = Norm_by_averagereads) %>%
+  separate(col = sample, sep = "_", into = c("replicate", "time"), remove = FALSE)
+
+### tRNA ratio
+
+tRNA_ratio <- read.csv("../data_share/tRNA/tRNA_ratio_annotated.csv") %>% 
+  dplyr::select(sample, codon, AA, ratio_total) 
+
+##############
+# Figure
+##############
+CO_tRNA_spearman <- asite_host %>% 
+  merge(., tRNA_ratio, by.x = c("sample", "Asite"), by.y = c("sample", "codon")) %>%
+  group_by(sample) %>% 
+  dplyr::summarise(
+    rho = cor.test(CO_H, ratio_total, method = "spearman", exact = FALSE)$estimate, 
+    p_value = cor.test(CO_H, ratio_total, method = "spearman", exact = FALSE)$p.value,
+    .groups = "drop"
+  )
+
+
+fig.S4 <- asite_host %>%
+  group_by(sample) %>% 
+  dplyr::mutate(CO_norm = scale(CO_H)) %>% ungroup() %>%
+  separate(col = "sample", sep = "_", into = c("replicate", "time"), remove = FALSE) %>%
+  merge(., tRNA_ratio, by.x = c("sample", "Asite"), by.y = c("sample", "codon")) %>%
+  ggplot(aes(x = CO_H, y = ratio_total)) + 
+  geom_point(size = 0.1, alpha = 0.8) + 
+  geom_text(
+      data = CO_tRNA_spearman,
+      aes(label = paste0("rho: ", round(rho, 3))),
+      x = Inf, y = Inf, # position the text in the top left corner
+      hjust = 1.1, vjust = 1.5,
+      size = 1.5, color = "black",
+      parse = TRUE
+    ) +
+  geom_text(
+      data = CO_tRNA_spearman,
+      aes(label = paste0("p: ", round(p_value, 5))),
+      x = Inf, y = Inf, # position the text in the top left corner
+      hjust = 1.1, vjust = 2.5, 
+      size = 1.5, color = "black",
+      parse = TRUE
+    ) +
+  xlab("Host codon occupancy") + ylab("tRNA supply") + 
+  geom_smooth(method = "lm", se = FALSE, alpha = 0.5, linetype = "dashed", colour = "gray50", linewidth = 0.5) + 
+  facet_wrap(~sample, ncol = 4, scales = "free") + 
+  theme_bw() + 
+  ylim(0,10) + 
+  theme(axis.line = element_blank(),
+        legend.title = element_blank(),
+        text = element_text(size = 6),
+        strip.text.y = element_blank(),
+        strip.background = element_rect(fill = "white", colour = "white"),
+        legend.key.size = unit(2, "mm"))
+
+fig.S4
+
+```

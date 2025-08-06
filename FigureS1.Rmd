@@ -1,0 +1,133 @@
+```{r}
+# Load essential packages
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+library(stringr)
+```
+
+
+
+```{r}
+codon_usage_df <- read.csv("../data_share/tRNA/codon_usage_table.csv")
+head(codon_usage_df)
+```
+
+## Figure S1A
+
+```{r}
+top_mimi_df <- codon_usage_df %>% mutate(top_mimi = ifelse(freq_codon_mimi > 60, "top", "off"))
+
+codon_usage_df %>% 
+  dplyr::filter(!codon %in% c("TGA", "TAG", "TAA")) %>%
+  dplyr::summarise(
+    rho_freq = cor(freq_codon_mimi, freq_codon_amoeba, method = "spearman"),
+  ) # -0.611
+
+fig.S1A_codon_freq <- codon_usage_df %>%
+  mutate(top_mimi = ifelse(freq_codon_mimi > 60, "top", "off")) %>% 
+  filter(!codon %in% c("TGA", "TAG", "TAA")) %>%
+  ggplot(aes(x = freq_codon_mimi, y = freq_codon_amoeba)) + 
+  geom_point(aes(color = top_mimi), size = 0.3) +  
+  scale_color_manual(values = c("top" = "red", "off" = "black")) +
+  geom_text_repel(data = filter(top_mimi_df, top_mimi == "top"), 
+                  aes(label = codon), 
+                  size = 2,
+                  box.padding = 0.1, 
+                  point.padding = 0,
+                  segment.color = 'black') +
+  xlab(label = "APMV") + ylab(label = "Amoeba") + 
+  theme_bw() + 
+  theme(text = element_text(size = 8), 
+        legend.key.size = unit(2, "mm"),
+        strip.background = element_rect(fill = "white", colour = "white"),
+        legend.title = element_blank(),
+        legend.position = "none") 
+
+fig.S1A_codon_freq
+```
+
+## Figure S1B
+
+```{r}
+# Load a table of tGCN
+tGCN_df <- read.csv("../data_share/tRNA/tRNA_ratio_annotated.csv")
+
+tGCN_df <- tGCN_df %>% 
+  dplyr::select(codon, pos3_type, tGCN, sym_num) %>% 
+  unique()
+
+merge(codon_usage_df , tGCN_df , by = "codon") %>%
+  filter(!codon %in% c("TGA", "TAG", "TAA")) %>% 
+  dplyr::summarise(
+    amoeba_spear = cor(freq_codon_amoeba, tGCN, method = "spearman")
+  )
+
+fig.S2B_tGCN_mimi_codon_freq <- merge(codon_usage_df , tGCN_df , by = "codon") %>%
+  filter(!codon %in% c("TGA", "TAG", "TAA")) %>%
+  ggplot(aes(x = freq_codon_mimi, y = tGCN)) + 
+  geom_point(color = "black", size = 0.3, alpha = 1) + 
+  xlab(label = "APMV") + ylab(label = "tGCN") + 
+  theme_bw() + 
+  theme(text = element_text(size = 8), 
+        legend.key.size = unit(2, "mm"),
+        strip.background = element_rect(fill = "white", colour = "white"),
+        legend.title = element_blank()) 
+
+fig.S2B_tGCN_mimi_codon_freq
+```
+
+## Figure S1C
+
+```{r}
+merge(codon_usage_df , tGCN_df , by = "codon") %>%
+  filter(!codon %in% c("TGA", "TAG", "TAA")) %>% 
+  dplyr::summarise(
+    rho = cor(freq_codon_amoeba, tGCN, method = "spearman")
+  )
+
+fig.S1C_tGCN_RSCU <- merge(codon_usage_df , tGCN_df , by = "codon") %>%
+  filter(!codon %in% c("TGA", "TAG", "TAA")) %>%
+  ggplot(aes(x = freq_codon_amoeba, y = tGCN)) + 
+  geom_point(color = "black", size = 0.3) + 
+  xlab(label = "Amoeba") + ylab(label = "tGCN") + 
+  theme_bw() + 
+  theme(text = element_text(size = 8), 
+        legend.key.size = unit(2, "mm"),
+        strip.background = element_rect(fill = "white", colour = "white"),
+        legend.title = element_blank()) 
+
+fig.S1C_tGCN_RSCU
+
+```
+
+
+## Figure S1D: GC and GC3 of viral and host genes
+
+```{r}
+amoeba_tAI <- read.csv("../data_share/tRNA/amoeba_tAI_length.csv", header = TRUE, col.names = c('gene', 'GC', 'GC3', 'length', 'tAI'))
+virus_tAI <- read.csv("../data_share/tRNA/virus_tAI_length.csv", header = TRUE, col.names = c('gene', 'GC', 'GC3', 'length', 'tAI'))
+amoeba_tAI[, "source"] <- "Host"
+virus_tAI[, "source"] <- "Virus"
+merge_tAI <- rbind(virus_tAI, amoeba_tAI)
+head(merge_tAI)
+```
+
+
+
+
+```{r}
+fig.S1D_GC3_GC_point <- merge_tAI %>%
+  ggplot(aes(x = GC, y = GC3, color = source)) +
+  geom_point(size = 0.3, alpha = 1) + 
+  scale_fill_npg() + scale_color_npg() + 
+  xlab("GC") + ylab("GC3") + 
+  theme_bw() + 
+  theme(text = element_text(size = 8), 
+        legend.key.size = unit(2, "mm"),
+        legend.title = element_blank(),
+        strip.background = element_rect(fill = "white", colour = "white"))
+
+fig.S1D_GC3_GC_point
+```
+
