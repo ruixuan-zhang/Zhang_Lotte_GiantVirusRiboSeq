@@ -8,3 +8,6 @@ Preprint version can be found here: https://www.biorxiv.org/content/10.1101/2024
 Data corresponding to these scripts have been uploaded to zenodo: https://zenodo.org/records/16555392
 
 Instructions were written in the code for reproducing every figure. Current scripts can work with R 4.3.1.
+
+## License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
