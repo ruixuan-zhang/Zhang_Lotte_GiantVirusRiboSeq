@@ -6,3 +6,5 @@ This repository saves the source code for the following paper
 Preprint version can be found here: https://www.biorxiv.org/content/10.1101/2024.10.07.616867v1.abstract
 
 Data corresponding to these scripts have been uploaded to zenodo: https://zenodo.org/records/16555392
+
+Instructions were written in the code for reproducing every figure. Current scripts can work with R 4.3.1.
