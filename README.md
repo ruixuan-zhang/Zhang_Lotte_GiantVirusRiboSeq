@@ -57,7 +57,7 @@ This folder saves the result of luciferase experiment for figure s7.
 
 #### meta
 
-This folder saves the expression-related tables.
+This folder saves the expression-related tables mainly corresponding to Figure 1.
 
 - merged_RPF.csv: fraction of mapped footprints in terms of footprint length (ranging from 15 to 35) in different sample and in host or virus.
 - ribo_lib_merge.csv and rna_lib_merge.csv: Sum of number of mapped reads to each genome (amoeba nucleus, mitochondria and virus).
@@ -68,7 +68,7 @@ This folder saves the expression-related tables.
 
 #### occupancy
 
-This folder saves the Asite codon occupancy result for host and virus.
+This folder saves the Asite codon occupancy result for host and virus, which is used in Figure 2A,B.
 
 #### periodicity
 
